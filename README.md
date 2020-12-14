@@ -2,7 +2,7 @@
 
 ## progress
 
-- [ ] [Lab util: Unix utilities]
+- [x] [Lab util: Unix utilities](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/util)
 - [ ] [Lab syscall: System calls]
 - [ ] [Lab pgtbl: Page tables]
 - [ ] [Lab traps: Trap]
