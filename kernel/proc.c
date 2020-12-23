@@ -21,6 +21,7 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
+
 // initialize the proc table at boot time.
 void
 procinit(void)
@@ -273,6 +274,9 @@ fork(void)
     release(&np->lock);
     return -1;
   }
+  //lab
+  np->syscallMask = p->syscallMask;
+
   np->sz = p->sz;
 
   np->parent = p;
