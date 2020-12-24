@@ -3,7 +3,7 @@
 ## progress
 
 - [x] [Lab util: Unix utilities](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/util)
-- [ ] [Lab syscall: System calls]
+- [x] [Lab syscall: System calls](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/syscall)
 - [ ] [Lab pgtbl: Page tables]
 - [ ] [Lab traps: Trap]
 - [ ] [Lab lazy: Lazy allocation]
