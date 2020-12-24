@@ -5,6 +5,7 @@
 #include "param.h"
 #include "memlayout.h"
 #include "spinlock.h"
+#include "sysinfo.h"
 #include "proc.h"
 
 //lab
@@ -15,6 +16,28 @@ sys_trace(void){
     return -1;
   printf("%d\n",myproc()->syscallMask);
   myproc()->syscallMask = n;
+  return 0;
+}
+
+uint64
+sys_sysinfo(void){
+  uint64 ret;
+  struct proc *p = myproc();
+  struct sysinfo info;
+
+  //get the return addr(func args)
+  if(argaddr(0,&ret)<0)
+    return -1;
+
+  //fill struct
+  info.freemem = collect_free_mem();
+  info.nproc  = collect_unused_proc();
+  
+  //copy kernel info to user space;
+  //ret is from userspace,copy the content of info to ret
+  if(copyout(p->pagetable,ret,(char*)&info,sizeof(info))<0)
+    return -1;
+
   return 0;
 }
 
