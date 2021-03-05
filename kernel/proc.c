@@ -20,6 +20,8 @@ static void wakeup1(struct proc *chan);
 static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
+extern pagetable_t kernel_pagetable;
+extern char etext[];
 
 // initialize the proc table at boot time.
 void
@@ -127,7 +129,40 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  //set kernel page table
+  p->kern_pagetable = ccKvminit();
+  //vmprint(kernel_pagetable);
+  uint64 kva = p->kstack;
+  uint64 kpa = kvmpa(kva);
+  if (kpa == 0)
+    panic("allocproc");
+  Ukvmmap(p->kern_pagetable, kva, kpa, PGSIZE, PTE_R | PTE_W);
   return p;
+}
+
+//free kernel page table
+void proc_free_kern_pgt(pagetable_t pgt,struct proc *p){
+  uvmunmap(pgt, UART0, 1, 0);
+  // virtio mmio disk interface
+  uvmunmap(pgt, VIRTIO0, 1, 0);
+  // CLINT
+  uvmunmap(pgt, CLINT, PGROUNDUP(0x10000)/PGSIZE, 0);
+
+  // PLIC
+  uvmunmap(pgt, PLIC, PGROUNDUP(0x400000)/PGSIZE, 0);
+  // map kernel text executable and read-only.
+  uvmunmap(pgt, KERNBASE, PGROUNDUP((uint64)etext-KERNBASE)/PGSIZE, 0);
+  
+  // map kernel data and the physical RAM we'll make use of.
+  uvmunmap(pgt, (uint64)etext, PGROUNDUP(PHYSTOP-(uint64)etext)/PGSIZE, 0);
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  uvmunmap(pgt, TRAMPOLINE, 1, 0);
+
+  //kern stk
+  uvmunmap(pgt, p->kstack, 1, 0);
+
+  uvmfree(pgt, 0);
 }
 
 // free a proc structure and the data hanging from it,
@@ -141,6 +176,10 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  //free kernel page table
+  if(p->kern_pagetable)
+    proc_free_kern_pgt(p->kern_pagetable, p);
+
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -473,8 +512,13 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        //switch stap
+        w_satp(MAKE_SATP(p->kern_pagetable));
+        sfence_vma();
+
         swtch(&c->context, &p->context);
 
+        kvminithart();
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;

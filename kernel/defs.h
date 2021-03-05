@@ -158,7 +158,11 @@ void            uartputc_sync(int);
 int             uartgetc(void);
 
 // vm.c
+//my func
 void            vmprint(pagetable_t);
+void            Ukvmmap(pagetable_t, uint64, uint64, uint64, int);
+pagetable_t     ccKvminit();
+
 void            kvminit(void);
 void            kvminithart(void);
 uint64          kvmpa(uint64);
