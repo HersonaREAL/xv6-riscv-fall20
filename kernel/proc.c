@@ -171,7 +171,7 @@ void proc_free_kern_pgt(pagetable_t pgt,struct proc *p){
   //kern stk
   uvmunmap(pgt, p->kstack, 1, 0);
 
-  uvmfree(pgt, 0);
+  uvmfree(pgt, p->sz);
 }
 
 // free a proc structure and the data hanging from it,
@@ -291,17 +291,18 @@ userinit(void)
 int
 growproc(int n)
 {
-  uint sz;
+  uint sz,oldsz;
   struct proc *p = myproc();
 
   sz = p->sz;
   if(n > 0){
     if(sz+n>PLIC)
       return -1;
+    oldsz = sz;
     if ((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0){
       return -1;
     }
-    //uptg_copy_to_ukptg(p->pagetable, p->kern_pagetable, sz, sz + n);
+    uptg_copy_to_ukptg(p->pagetable, p->kern_pagetable, oldsz, oldsz + n);
   }
   else if (n < 0)
   {
@@ -338,9 +339,8 @@ fork(void)
   np->parent = p;
 
   //copy user kernel page table to child
-  //uptg_copy_to_ukptg(np->pagetable, np->kern_pagetable, 0,np->sz);
-  //w_satp(MAKE_SATP(p->kern_pagetable));
-  //sfence_vma();
+  uptg_copy_to_ukptg(np->pagetable, np->kern_pagetable, 0,np->sz);
+
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);

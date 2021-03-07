@@ -18,7 +18,7 @@ exec(char *path, char **argv)
   struct elfhdr elf;
   struct inode *ip;
   struct proghdr ph;
-  pagetable_t pagetable = 0, oldpagetable,/*old_kern_ptg,*/kern_pgt;
+  pagetable_t pagetable = 0, oldpagetable,old_kern_ptg,kern_pgt;
   struct proc *p = myproc();
 
   begin_op();
@@ -57,7 +57,7 @@ exec(char *path, char **argv)
     if((sz1 = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz)) == 0)
       goto bad;
     //grow
-    //uptg_copy_to_ukptg(pagetable, kern_pgt, sz, ph.vaddr + ph.memsz);
+    uptg_copy_to_ukptg(pagetable, kern_pgt, sz, ph.vaddr + ph.memsz);
     sz = sz1;
     if(ph.vaddr % PGSIZE != 0)
       goto bad;
@@ -77,7 +77,7 @@ exec(char *path, char **argv)
   uint64 sz1;
   if((sz1 = uvmalloc(pagetable, sz, sz + 2*PGSIZE)) == 0)
     goto bad;
-  //uptg_copy_to_ukptg(pagetable, kern_pgt, sz, sz + 2 * PGSIZE);
+  uptg_copy_to_ukptg(pagetable, kern_pgt, sz, sz + 2 * PGSIZE);
 
   sz = sz1;
   uvmclear(pagetable, sz-2*PGSIZE);
@@ -120,14 +120,14 @@ exec(char *path, char **argv)
     
   // Commit to the user image.
   oldpagetable = p->pagetable;
-  //old_kern_ptg = p->kern_pagetable;
+  old_kern_ptg = p->kern_pagetable;
   p->pagetable = pagetable;
-  //p->kern_pagetable = kern_pgt;
+  p->kern_pagetable = kern_pgt;
 
-  //proc_free_kern_pgt(old_kern_ptg, p);
+  proc_free_kern_pgt(old_kern_ptg, p);
   p->sz = sz;
-  //w_satp(MAKE_SATP(p->kern_pagetable));
-  //sfence_vma();
+  w_satp(MAKE_SATP(p->kern_pagetable));
+  sfence_vma();
 
   p->trapframe->epc = elf.entry; // initial program counter = main
   p->trapframe->sp = sp; // initial stack pointer
