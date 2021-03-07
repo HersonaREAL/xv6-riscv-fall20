@@ -30,10 +30,9 @@ int
 copyin_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
   struct proc *p = myproc();
-
-  if (srcva >= p->sz || srcva+len >= p->sz || srcva+len < srcva)
+  if (srcva >= p->sz || srcva + len >= p->sz || srcva + len < srcva)
     return -1;
-  memmove((void *) dst, (void *)srcva, len);
+  memmove((void *)dst, (void *)srcva, len);
   stats.ncopyin++;   // XXX lock
   return 0;
 }
@@ -46,9 +45,14 @@ int
 copyinstr_new(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
   struct proc *p = myproc();
-  char *s = (char *) srcva;
-  
-  stats.ncopyinstr++;   // XXX lock
+  vmprint(p->pagetable);
+  //vmprint(p->kern_pagetable);
+  uint64 upa = walkaddr(p->pagetable, (uint64)dst);
+  uint64 kpa = walkaddr(p->kern_pagetable, (uint64)dst);
+  printf("\nupa:%p kpa:%p\n\n", upa, kpa);
+
+  char *s = (char *)srcva;
+  stats.ncopyinstr++; // XXX lock
   for(int i = 0; i < max && srcva + i < p->sz; i++){
     dst[i] = s[i];
     if(s[i] == '\0')

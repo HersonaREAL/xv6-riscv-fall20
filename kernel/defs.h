@@ -13,6 +13,11 @@ struct mbuf;
 struct sock;
 #endif
 
+// vmcopyin.c
+int             statscopyin(char *, int);
+int             copyin_new(pagetable_t, char *, uint64, uint64);
+int             copyinstr_new(pagetable_t, char *, uint64, uint64);
+
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -91,7 +96,9 @@ void            exit(int);
 int             fork(void);
 int             growproc(int);
 pagetable_t     proc_pagetable(struct proc *);
+pagetable_t     proc_kern_pagetable(struct proc *);
 void            proc_freepagetable(pagetable_t, uint64);
+void            proc_free_kern_pgt(pagetable_t, struct proc*);
 int             kill(int);
 struct cpu*     mycpu(void);
 struct cpu*     getmycpu(void);
@@ -162,6 +169,7 @@ int             uartgetc(void);
 void            vmprint(pagetable_t);
 void            Ukvmmap(pagetable_t, uint64, uint64, uint64, int);
 pagetable_t     ccKvminit();
+void            uptg_copy_to_ukptg(pagetable_t , pagetable_t , uint64 ,uint64);
 
 void            kvminit(void);
 void            kvminithart(void);
@@ -227,4 +235,5 @@ void            sockclose(struct sock *);
 int             sockread(struct sock *, uint64, int);
 int             sockwrite(struct sock *, uint64, int);
 void            sockrecvudp(struct mbuf*, uint32, uint16, uint16);
+
 #endif

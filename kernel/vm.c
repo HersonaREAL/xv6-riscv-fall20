@@ -79,7 +79,6 @@ ccKvminit(){
   // the highest virtual address in the kernel.
   Ukvmmap(pgt,TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 
-
   return pgt;
 }
 
@@ -404,6 +403,24 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   return -1;
 }
 
+void
+uptg_copy_to_ukptg(pagetable_t uptg,pagetable_t ukptg, uint64 oldsz,uint64 sz) {
+  pte_t *pte;
+  uint64 pa, i;
+  uint flags;
+  if(oldsz>sz)
+    return;
+  for (i = PGROUNDUP(oldsz); i < sz; i += PGSIZE) {
+    if((pte = walk(uptg,i,0)) == 0)
+      panic("uptg_copy_to_ukptg: pte should exist");
+    if((*pte&PTE_V)==0)
+      continue;
+    pa = PTE2PA(*pte);
+    flags = PTE_FLAGS(*pte);
+    Ukvmmap(ukptg, i, pa, PGSIZE, flags);
+  }
+}
+
 // mark a PTE invalid for user access.
 // used by exec for the user stack guard page.
 void
@@ -448,6 +465,8 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
+  //vmprint(pagetable);
+  //return copyin_new(pagetable, dst, srcva, len);
   uint64 n, va0, pa0;
 
   while(len > 0){
@@ -474,6 +493,7 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
+  //return copyinstr_new(pagetable, dst, srcva, max);
   uint64 n, va0, pa0;
   int got_null = 0;
 

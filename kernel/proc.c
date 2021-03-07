@@ -87,6 +87,19 @@ allocpid() {
   return pid;
 }
 
+pagetable_t
+proc_kern_pagetable(struct proc *p){
+  pagetable_t pgt;
+  pgt = ccKvminit();
+  uint64 kva = p->kstack;
+  uint64 kpa = kvmpa(kva);
+  if (kpa == 0)
+    panic("allocproc");
+  Ukvmmap(pgt, kva, kpa, PGSIZE, PTE_R | PTE_W);
+  //Ukvmmap(p->kern_pagetable, TRAPFRAME, (uint64)(p->trapframe), PGSIZE, PTE_R | PTE_W);
+  return pgt;
+}
+
 // Look in the process table for an UNUSED proc.
 // If found, initialize state required to run in the kernel,
 // and return with p->lock held.
@@ -122,7 +135,7 @@ found:
     release(&p->lock);
     return 0;
   }
-
+  //vmprint(p->pagetable);
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
@@ -130,18 +143,14 @@ found:
   p->context.sp = p->kstack + PGSIZE;
 
   //set kernel page table
-  p->kern_pagetable = ccKvminit();
-  //vmprint(kernel_pagetable);
-  uint64 kva = p->kstack;
-  uint64 kpa = kvmpa(kva);
-  if (kpa == 0)
-    panic("allocproc");
-  Ukvmmap(p->kern_pagetable, kva, kpa, PGSIZE, PTE_R | PTE_W);
+  p->kern_pagetable = proc_kern_pagetable(p);
+
   return p;
 }
 
 //free kernel page table
 void proc_free_kern_pgt(pagetable_t pgt,struct proc *p){
+  kvminithart();
   uvmunmap(pgt, UART0, 1, 0);
   // virtio mmio disk interface
   uvmunmap(pgt, VIRTIO0, 1, 0);
@@ -258,6 +267,11 @@ userinit(void)
   // allocate one user page and copy init's instructions
   // and data into it.
   uvminit(p->pagetable, initcode, sizeof(initcode));
+  uint64 va = 0, pa = walkaddr(p->pagetable, va);
+  if(pa==0)
+    panic("userinit");
+  Ukvmmap(p->kern_pagetable, va, pa, PGSIZE, PTE_W | PTE_R | PTE_X );
+
   p->sz = PGSIZE;
 
   // prepare for the very first "return" from kernel to user.
@@ -282,10 +296,16 @@ growproc(int n)
 
   sz = p->sz;
   if(n > 0){
-    if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
+    if(sz+n>PLIC)
+      return -1;
+    if ((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0){
       return -1;
     }
-  } else if(n < 0){
+    //uptg_copy_to_ukptg(p->pagetable, p->kern_pagetable, sz, sz + n);
+  }
+  else if (n < 0)
+  {
+    uvmdealloc(p->kern_pagetable, sz, sz + n);
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
@@ -305,16 +325,22 @@ fork(void)
   if((np = allocproc()) == 0){
     return -1;
   }
-
   // Copy user memory from parent to child.
-  if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
+  if (uvmcopy(p->pagetable, np->pagetable, p->sz) < 0) {
     freeproc(np);
     release(&np->lock);
     return -1;
   }
+
+
   np->sz = p->sz;
 
   np->parent = p;
+
+  //copy user kernel page table to child
+  //uptg_copy_to_ukptg(np->pagetable, np->kern_pagetable, 0,np->sz);
+  //w_satp(MAKE_SATP(p->kern_pagetable));
+  //sfence_vma();
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
