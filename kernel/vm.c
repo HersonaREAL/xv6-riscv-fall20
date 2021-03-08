@@ -337,6 +337,18 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
   return newsz;
 }
 
+void
+ukvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
+{
+  if(newsz >= oldsz)
+    return;
+
+  if(PGROUNDUP(newsz) < PGROUNDUP(oldsz)){
+    int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
+    uvmunmap(pagetable, PGROUNDUP(newsz), npages, 0);
+  }
+}
+
 // Recursively free page-table pages.
 // All leaf mappings must already have been removed.
 void
@@ -403,21 +415,27 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   return -1;
 }
 
+//copy user pgt to user kern pgt
 void
 uptg_copy_to_ukptg(pagetable_t uptg,pagetable_t ukptg, uint64 oldsz,uint64 sz) {
-  pte_t *pte;
+  pte_t *pte_user,*pte_kern;
   uint64 pa, i;
   uint flags;
   if(oldsz>sz)
     return;
-  for (i = PGROUNDUP(oldsz); i < sz; i += PGSIZE) {
-    if((pte = walk(uptg,i,0)) == 0)
+  oldsz = PGROUNDUP(oldsz);
+  for (i = oldsz; i < sz; i += PGSIZE){
+    if((pte_user = walk(uptg,i,0)) == 0)
       panic("uptg_copy_to_ukptg: pte should exist");
-    if((*pte&PTE_V)==0)
+    if((*pte_user&PTE_V)==0)
       panic("uptg_copy_to_ukptg: invail page");
-    pa = PTE2PA(*pte);
-    flags = (PTE_FLAGS(*pte))&(~PTE_U);
-    Ukvmmap(ukptg, i, pa, PGSIZE, flags);
+
+    if((pte_kern = walk(ukptg,i,1)) == 0)
+      panic("uptg_copy_to_ukptg: pte alloc fail");
+    
+    pa = PTE2PA(*pte_user);
+    flags = (PTE_FLAGS(*pte_user))&(~PTE_U);
+    *pte_kern = PA2PTE(pa) | flags;
   }
 }
 

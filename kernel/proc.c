@@ -144,34 +144,30 @@ found:
 
   //set kernel page table
   p->kern_pagetable = proc_kern_pagetable(p);
+  if(p->kern_pagetable==0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
 
   return p;
 }
 
-//free kernel page table
-void proc_free_kern_pgt(pagetable_t pgt,struct proc *p){
-  kvminithart();
-  uvmunmap(pgt, UART0, 1, 0);
-  // virtio mmio disk interface
-  uvmunmap(pgt, VIRTIO0, 1, 0);
-  // CLINT
-  uvmunmap(pgt, CLINT, PGROUNDUP(0x10000)/PGSIZE, 0);
-
-  // PLIC
-  uvmunmap(pgt, PLIC, PGROUNDUP(0x400000)/PGSIZE, 0);
-  // map kernel text executable and read-only.
-  uvmunmap(pgt, KERNBASE, PGROUNDUP((uint64)etext-KERNBASE)/PGSIZE, 0);
-  
-  // map kernel data and the physical RAM we'll make use of.
-  uvmunmap(pgt, (uint64)etext, PGROUNDUP(PHYSTOP-(uint64)etext)/PGSIZE, 0);
-  // map the trampoline for trap entry/exit to
-  // the highest virtual address in the kernel.
-  uvmunmap(pgt, TRAMPOLINE, 1, 0);
-
-  //kern stk
-  uvmunmap(pgt, p->kstack, 1, 0);
-
-  uvmfree(pgt, p->sz);
+//free kernel page table ,ignore leaf
+void proc_free_kern_pgt(pagetable_t pagetable){
+  // there are 2^9 = 512 PTEs in a page table.
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+      // this PTE points to a lower-level page table.
+      uint64 child = PTE2PA(pte);
+      proc_free_kern_pgt((pagetable_t)child);
+      pagetable[i] = 0;
+    } else if(pte & PTE_V){
+      continue;
+    }
+  }
+  kfree((void*)pagetable);
 }
 
 // free a proc structure and the data hanging from it,
@@ -187,7 +183,7 @@ freeproc(struct proc *p)
     proc_freepagetable(p->pagetable, p->sz);
   //free kernel page table
   if(p->kern_pagetable)
-    proc_free_kern_pgt(p->kern_pagetable, p);
+    proc_free_kern_pgt(p->kern_pagetable);
 
   p->pagetable = 0;
   p->sz = 0;
@@ -296,7 +292,7 @@ growproc(int n)
 
   sz = p->sz;
   if(n > 0){
-    if(sz+n>PLIC)
+    if((sz+n)>=PLIC)
       return -1;
     oldsz = sz;
     if ((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0){
@@ -306,7 +302,7 @@ growproc(int n)
   }
   else if (n < 0)
   {
-    uvmdealloc(p->kern_pagetable, sz, sz + n);
+    ukvmdealloc(p->kern_pagetable, sz, sz + n);
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
@@ -326,6 +322,8 @@ fork(void)
   if((np = allocproc()) == 0){
     return -1;
   }
+
+
   // Copy user memory from parent to child.
   if (uvmcopy(p->pagetable, np->pagetable, p->sz) < 0) {
     freeproc(np);
@@ -544,7 +542,6 @@ scheduler(void)
 
         swtch(&c->context, &p->context);
 
-        kvminithart();
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
@@ -555,6 +552,7 @@ scheduler(void)
     }
 #if !defined (LAB_FS)
     if(found == 0) {
+      kvminithart();
       intr_on();
       asm volatile("wfi");
     }
