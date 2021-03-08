@@ -4,7 +4,7 @@
 
 - [x] [Lab util: Unix utilities](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/util)
 - [x] [Lab syscall: System calls](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/syscall)
-- [ ] [Lab pgtbl: Page tables]
+- [X] [Lab pgtbl: Page tables](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/pgtbl)
 - [ ] [Lab traps: Trap]
 - [ ] [Lab lazy: Lazy allocation]
 - [ ] [Lab cow: Copy-on-write fork]
