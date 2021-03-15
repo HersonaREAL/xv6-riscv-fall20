@@ -29,6 +29,46 @@ trapinithart(void)
   w_stvec((uint64)kernelvec);
 }
 
+void copyTrapFrame(struct proc *p){
+  //printf("copy start");
+  p->bak.kernel_satp = p->trapframe->kernel_satp;
+  p->bak.kernel_sp = p->trapframe->kernel_sp;
+  p->bak.kernel_trap = p->trapframe->kernel_trap;
+  p->bak.epc = p->trapframe->epc;
+  p->bak.kernel_hartid = p->trapframe->kernel_hartid;
+  p->bak.ra = p->trapframe->ra;
+  p->bak.sp = p->trapframe->sp;
+  p->bak.gp = p->trapframe->gp;
+  p->bak.tp = p->trapframe->tp;
+  p->bak.t0 = p->trapframe->t0;
+  p->bak.t1 = p->trapframe->t1;
+  p->bak.t2 = p->trapframe->t2;
+  p->bak.s0 = p->trapframe->s0;
+  p->bak.s1 = p->trapframe->s1;
+  p->bak.a0 = p->trapframe->a0;
+  p->bak.a1 = p->trapframe->a1;
+  p->bak.a2 = p->trapframe->a2;
+  p->bak.a3 = p->trapframe->a3;
+  p->bak.a4 = p->trapframe->a4;
+  p->bak.a5 = p->trapframe->a5;
+  p->bak.a6 = p->trapframe->a6;
+  p->bak.a7 = p->trapframe->a7;
+  p->bak.s2 = p->trapframe->s2;
+  p->bak.s3 = p->trapframe->s3;
+  p->bak.s4 = p->trapframe->s4;
+  p->bak.s5 = p->trapframe->s5;
+  p->bak.s6 = p->trapframe->s6;
+  p->bak.s7 = p->trapframe->s7;
+  p->bak.s8 = p->trapframe->s8;
+  p->bak.s9 = p->trapframe->s9;
+  p->bak.s10 = p->trapframe->s10;
+  p->bak.s11 = p->trapframe->s11;
+  p->bak.t3 = p->trapframe->t3;
+  p->bak.t4 = p->trapframe->t4;
+  p->bak.t6 = p->trapframe->t6;
+  p->bak.t5 = p->trapframe->t5;
+}
+
 //
 // handle an interrupt, exception, or system call from user space.
 // called from trampoline.S
@@ -77,8 +117,21 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2){
+    if(p->boomReady&&p->boomTime){
+      ++p->dida;
+      if(p->dida==p->boomTime){
+        //save origin regs
+        copyTrapFrame(p);
+
+        //ra point to handle func
+        p->trapframe->epc = p->boomb;
+        p->dida = 0;
+        p->boomReady = 0;
+      }
+    }
     yield();
+  }
 
   usertrapret();
 }

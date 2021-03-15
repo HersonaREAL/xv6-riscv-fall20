@@ -127,6 +127,11 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  p->boomTime = 0;
+  p->dida = 0;
+  p->boomb = 0;
+  p->retPeace = 0;
+  p->boomReady = 0;
   return p;
 }
 

@@ -103,4 +103,11 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  uint64 boomTime;              //time to boom!
+  uint64 dida;                 //now tick
+  uint64 boomb;             //when tick equals boom,the boomb starts!
+  uint64 retPeace;             //after boom,where you should return
+  int boomReady;            //boomReady = 1 tick go
+  struct trapframe bak;
 };
