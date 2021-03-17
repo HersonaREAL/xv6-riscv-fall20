@@ -75,6 +75,25 @@ sys_read(void)
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argaddr(1, &p) < 0)
     return -1;
+  // uint64 tpa = walkaddr(myproc()->pagetable, p);
+  // if(tpa==0){
+  //     p = PGROUNDDOWN(p);
+  //     char *pa = kalloc();
+  //     if (pa != 0) {
+  //       //zeroing page
+  //       memset(pa, 0, PGSIZE);
+
+  //       //map it
+  //       if (mappages(myproc()->pagetable, p, PGSIZE, (uint64)pa, PTE_W | PTE_X | PTE_R | PTE_U) != 0){
+  //         kfree(pa);
+  //         //printf("usertrap(): mappages fail\n");
+  //         //myproc()->killed = 1;
+  //       }
+  //     } else {
+  //       //printf("usertrap(): There is not enough mem to alloc page\n");
+  //       //myproc()->killed = 1;
+  //     }
+  // }
   return fileread(f, p, n);
 }
 
@@ -87,7 +106,25 @@ sys_write(void)
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argaddr(1, &p) < 0)
     return -1;
+  uint64 tpa = walkaddr(myproc()->pagetable, p);
+  // if(tpa==0){
+  //     p = PGROUNDDOWN(p);
+  //     char *pa = kalloc();
+  //     if (pa != 0) {
+  //       //zeroing page
+  //       memset(pa, 0, PGSIZE);
 
+  //       //map it
+  //       if (mappages(myproc()->pagetable, p, PGSIZE, (uint64)pa, PTE_W | PTE_X | PTE_R | PTE_U) != 0){
+  //         kfree(pa);
+  //         //printf("usertrap(): mappages fail\n");
+  //         //myproc()->killed = 1;
+  //       }
+  //     } else {
+  //       //printf("usertrap(): There is not enough mem to alloc page\n");
+  //       //myproc()->killed = 1;
+  //     }
+  // }
   return filewrite(f, p, n);
 }
 

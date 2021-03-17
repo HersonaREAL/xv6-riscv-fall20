@@ -68,23 +68,29 @@ usertrap(void)
   } else if((which_dev = devintr()) != 0){
     // ok
   } else if(r_scause()==15||r_scause()==13) {
-    //page fault and alloc page for prog
-    uint64 badPage = PGROUNDDOWN(r_stval());
-    char* pa = kalloc();
-    if(pa!=0){
-      //zeroing page
-      memset(pa,0,PGSIZE);
+    uint64 badPage = r_stval();
+    //large than p->sz
+    if (badPage > p->sz||badPage<=PGROUNDUP(p->trapframe->sp))
+      p->killed = 1;
 
-      //map it
-      if(mappages(p->pagetable, badPage, PGSIZE, (uint64)pa, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
-        kfree(pa);
-        printf("usertrap(): mappages fail\n");
+    if (!p->killed) {
+      //page fault and alloc page for prog
+      badPage = PGROUNDDOWN(badPage);
+      char *pa = kalloc();
+      if (pa != 0) {
+        //zeroing page
+        memset(pa, 0, PGSIZE);
+
+        //map it
+        if (mappages(p->pagetable, badPage, PGSIZE, (uint64)pa, PTE_W | PTE_X | PTE_R | PTE_U) != 0){
+          kfree(pa);
+          //printf("usertrap(): mappages fail\n");
+          p->killed = 1;
+        }
+      } else {
+        //printf("usertrap(): There is not enough mem to alloc page\n");
         p->killed = 1;
       }
-
-    } else {
-      printf("usertrap(): There is not enough mem to alloc page\n");
-      p->killed = 1;
     }
 
   } else {
