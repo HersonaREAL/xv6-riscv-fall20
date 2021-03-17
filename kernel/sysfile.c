@@ -72,28 +72,22 @@ sys_read(void)
   struct file *f;
   int n;
   uint64 p;
+  struct proc *mp = myproc();
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argaddr(1, &p) < 0)
     return -1;
-  // uint64 tpa = walkaddr(myproc()->pagetable, p);
-  // if(tpa==0){
-  //     p = PGROUNDDOWN(p);
-  //     char *pa = kalloc();
-  //     if (pa != 0) {
-  //       //zeroing page
-  //       memset(pa, 0, PGSIZE);
-
-  //       //map it
-  //       if (mappages(myproc()->pagetable, p, PGSIZE, (uint64)pa, PTE_W | PTE_X | PTE_R | PTE_U) != 0){
-  //         kfree(pa);
-  //         //printf("usertrap(): mappages fail\n");
-  //         //myproc()->killed = 1;
-  //       }
-  //     } else {
-  //       //printf("usertrap(): There is not enough mem to alloc page\n");
-  //       //myproc()->killed = 1;
-  //     }
-  // }
+  if(p>mp->sz)
+    return -1;
+  uint64 pg = PGROUNDDOWN(p);
+  for (uint64 i = pg; i < p + n;i+=PGSIZE){
+    if(walkaddr(mp->pagetable, i)==0){
+      char *pa = kalloc();
+      memset(pa, 0, PGSIZE);
+      if (mappages(mp->pagetable, i, PGSIZE, (uint64)pa, PTE_W | PTE_X | PTE_R | PTE_U) != 0){
+            kfree(pa);
+      }
+    }
+  }
   return fileread(f, p, n);
 }
 
@@ -103,29 +97,23 @@ sys_write(void)
   struct file *f;
   int n;
   uint64 p;
+  struct proc *mp = myproc();
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argaddr(1, &p) < 0)
     return -1;
-  uint64 tpa = walkaddr(myproc()->pagetable, p);
-  // if(tpa==0){
-  //     p = PGROUNDDOWN(p);
-  //     char *pa = kalloc();
-  //     if (pa != 0) {
-  //       //zeroing page
-  //       memset(pa, 0, PGSIZE);
-
-  //       //map it
-  //       if (mappages(myproc()->pagetable, p, PGSIZE, (uint64)pa, PTE_W | PTE_X | PTE_R | PTE_U) != 0){
-  //         kfree(pa);
-  //         //printf("usertrap(): mappages fail\n");
-  //         //myproc()->killed = 1;
-  //       }
-  //     } else {
-  //       //printf("usertrap(): There is not enough mem to alloc page\n");
-  //       //myproc()->killed = 1;
-  //     }
-  // }
-  return filewrite(f, p, n);
+  if(p>mp->sz)
+    return -1;
+  uint64 pg = PGROUNDDOWN(p);
+  for (uint64 i = pg; i < p + n;i+=PGSIZE){
+    if(walkaddr(mp->pagetable, i)==0){
+      char *pa = kalloc();
+      memset(pa, 0, PGSIZE);
+      if (mappages(mp->pagetable, i, PGSIZE, (uint64)pa, PTE_W | PTE_X | PTE_R | PTE_U) != 0){
+            kfree(pa);
+      }
+    }
+  }
+    return filewrite(f, p, n);
 }
 
 uint64
@@ -503,6 +491,20 @@ sys_pipe(void)
     return -1;
   if(pipealloc(&rf, &wf) < 0)
     return -1;
+
+  if(fdarray>p->sz)
+    return -1;
+  uint64 pg = PGROUNDDOWN(fdarray);
+  if(walkaddr(p->pagetable,pg)==0){
+    char *pa = kalloc();
+    memset(pa, 0, PGSIZE);
+    if (mappages(p->pagetable, pg, PGSIZE, (uint64)pa, PTE_W | PTE_X | PTE_R | PTE_U) != 0){
+        kfree(pa);
+        return -1;
+    }
+  }
+
+  
   fd0 = -1;
   if((fd0 = fdalloc(rf)) < 0 || (fd1 = fdalloc(wf)) < 0){
     if(fd0 >= 0)

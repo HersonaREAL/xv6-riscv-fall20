@@ -84,7 +84,6 @@ usertrap(void)
         //map it
         if (mappages(p->pagetable, badPage, PGSIZE, (uint64)pa, PTE_W | PTE_X | PTE_R | PTE_U) != 0){
           kfree(pa);
-          //printf("usertrap(): mappages fail\n");
           p->killed = 1;
         }
       } else {

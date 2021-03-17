@@ -253,6 +253,8 @@ growproc(int n)
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
+  if(p->sz>TRAPFRAME)
+    return -1;
   return 0;
 }
 
