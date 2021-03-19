@@ -6,7 +6,7 @@
 - [x] [Lab syscall: System calls](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/syscall)
 - [X] [Lab pgtbl: Page tables](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/pgtbl)
 - [X] [Lab traps: Trap](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/traps)
-- [ ] [Lab lazy: Lazy allocation]
+- [x] [Lab lazy: Lazy allocation](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/lazy)
 - [ ] [Lab cow: Copy-on-write fork]
 - [ ] [Lab thread: Multithreading]
 - [ ] [Lab lock: Parallelism/locking]
