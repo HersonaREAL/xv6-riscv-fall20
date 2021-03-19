@@ -70,7 +70,7 @@ usertrap(void)
   } else if(r_scause()==15||r_scause()==13) {
     uint64 badPage = r_stval();
     //large than p->sz
-    if (badPage > p->sz||badPage<=PGROUNDUP(p->trapframe->sp))
+    if (badPage > p->sz||badPage<PGROUNDUP(p->trapframe->sp))
       p->killed = 1;
 
     if (!p->killed) {
@@ -168,11 +168,14 @@ kerneltrap()
   if(intr_get() != 0)
     panic("kerneltrap: interrupts enabled");
 
+  
+
   if((which_dev = devintr()) == 0){
     printf("scause %p\n", scause);
     printf("sepc=%p stval=%p\n", r_sepc(), r_stval());
     panic("kerneltrap");
   }
+
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)

@@ -444,9 +444,12 @@ sys_exec(void)
   int i;
   uint64 uargv, uarg;
 
+
   if(argstr(0, path, MAXPATH) < 0 || argaddr(1, &uargv) < 0){
     return -1;
   }
+
+
   memset(argv, 0, sizeof(argv));
   for(i=0;; i++){
     if(i >= NELEM(argv)){
@@ -489,11 +492,14 @@ sys_pipe(void)
 
   if(argaddr(0, &fdarray) < 0)
     return -1;
-  if(pipealloc(&rf, &wf) < 0)
-    return -1;
 
   if(fdarray>p->sz)
     return -1;
+
+  if(pipealloc(&rf, &wf) < 0)
+    return -1;
+
+
   uint64 pg = PGROUNDDOWN(fdarray);
   if(walkaddr(p->pagetable,pg)==0){
     char *pa = kalloc();
