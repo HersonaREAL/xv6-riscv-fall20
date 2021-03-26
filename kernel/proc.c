@@ -20,6 +20,7 @@ static void wakeup1(struct proc *chan);
 static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
+extern uint64 PGCNT[];
 
 // initialize the proc table at boot time.
 void
@@ -136,8 +137,12 @@ found:
 static void
 freeproc(struct proc *p)
 {
-  if(p->trapframe)
-    kfree((void*)p->trapframe);
+  if(p->trapframe){
+    uint64 pos = (uint64)p->trapframe / PGSIZE;
+    if(PGCNT[pos]>0)
+      --PGCNT[pos];
+    kfree((void *)p->trapframe);
+  }
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);

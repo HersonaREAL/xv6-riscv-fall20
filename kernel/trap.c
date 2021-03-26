@@ -10,6 +10,7 @@ struct spinlock tickslock;
 uint ticks;
 
 extern char trampoline[], uservec[], userret[];
+extern uint64 PGCNT[];
 
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
@@ -67,7 +68,45 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  } else if(r_scause()==13||r_scause()==15){
+    pte_t *pte;
+    uint64 badpg = PGROUNDDOWN( r_stval());
+    if (badpg > p->sz)
+      p->killed = 1;
+    if(p->killed!=1) {
+    //find pte
+    if ((pte = walk(p->pagetable,badpg,0))==0)
+      panic("usertrap(): walk");
+    uint flag = PTE_FLAGS(*pte);
+    uint64 pa = PTE2PA(*pte);
+
+    //is it a cow pg fault?
+    if(flag&PTE_COW) {
+
+      //own by one
+      // if(PGCNT[pa/PGSIZE]==1) {
+      //   *pte = (PA2PTE(pa) | flag | PTE_W) & (~PTE_COW);
+      // }else 
+        //alloc a new page
+        char* newpa = kalloc();
+        if(newpa!=0) {
+          *pte = PA2PTE(newpa) | ((flag | PTE_W) & (~PTE_COW));
+          memmove(newpa, (void*)pa, PGSIZE);
+          //decrease orginal pa
+          --PGCNT[pa/PGSIZE];
+          kfree((void*)pa);
+        }else {
+          //not enough mem
+          p->killed = 1;
+        }
+      
+    }else{
+      p->killed = 1;
+    }
+    }
+  }
+  else
+  {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
