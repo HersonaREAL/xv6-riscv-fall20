@@ -343,7 +343,7 @@ int uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 
     //increse cnt
     ++PGCNT[pa / PGSIZE];
-    //printf("uvmcopy:%d\n", PGCNT[pa / PGSIZE]);
+
 
     //father can not write!
     *pte = PA2PTE(pa) | flags;

@@ -100,7 +100,6 @@ void usertrap(void)
   
           //decrease orginal pa
           --PGCNT[pa / PGSIZE];
-          //printf("trap: %d\n", PGCNT[pa / PGSIZE]);
           kfree((void *)pa);
         }
         else
