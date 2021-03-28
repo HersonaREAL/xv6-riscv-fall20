@@ -343,6 +343,7 @@ int uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 
     //increse cnt
     ++PGCNT[pa / PGSIZE];
+    //printf("uvmcopy:%d\n", PGCNT[pa / PGSIZE]);
 
     //father can not write!
     *pte = PA2PTE(pa) | flags;
@@ -378,7 +379,8 @@ int copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
   {
     va0 = PGROUNDDOWN(dstva);
     pa0 = walkaddr(pagetable, va0);
-
+    if (pa0 == 0)
+      return -1;
     if ((pte = walk(pagetable, va0, 0)) == 0)
       panic("copyout: walk");
     uint flag = PTE_FLAGS(*pte);
@@ -407,8 +409,6 @@ int copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
         return -1;
     }
 
-    if (pa0 == 0)
-      return -1;
     n = PGSIZE - (dstva - va0);
     if (n > len)
       n = len;
