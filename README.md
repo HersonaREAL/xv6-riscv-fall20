@@ -8,7 +8,7 @@
 - [X] [Lab traps: Trap](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/traps)
 - [x] [Lab lazy: Lazy allocation](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/lazy)
 - [x] [Lab cow: Copy-on-write fork](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/cow)
-- [ ] [Lab thread: Multithreading]
+- [x] [Lab thread: Multithreading](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/thread)
 - [ ] [Lab lock: Parallelism/locking]
 - [ ] [Lab fs: File system]
 - [ ] [Lab mmap: Mmap]
