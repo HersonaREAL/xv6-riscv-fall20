@@ -63,7 +63,9 @@ thread_schedule(void)
      * Invoke thread_switch to switch from t to next_thread:
      * thread_switch(??, ??);
      */
-  } else
+    thread_switch((uint64)t->stack, (uint64)next_thread->stack);
+  }
+  else
     next_thread = 0;
 }
 
@@ -77,6 +79,27 @@ thread_create(void (*func)())
   }
   t->state = RUNNABLE;
   // YOUR CODE HERE
+  char *newsp = t->stack + STACK_SIZE - 1;
+  char *ra = (char *)func;
+  t->stack[0] = (char)((uint64)ra & 0xff);
+  t->stack[1] = (char)(((uint64)ra >> 8) & 0xff);
+  t->stack[2] = (char)(((uint64)ra >> 16) & 0xff);
+  t->stack[3] = (char)(((uint64)ra >> 24) & 0xff);
+  t->stack[4] = (char)(((uint64)ra >> 32) & 0xff);
+  t->stack[5] = (char)(((uint64)ra >> 40) & 0xff);
+  t->stack[6] = (char)(((uint64)ra >> 48) & 0xff);
+  t->stack[7] = (char)(((uint64)ra >> 56) & 0xff);
+
+  t->stack[8] = (char)((uint64)newsp & 0xff);
+  t->stack[9] = (char)(((uint64)newsp>>8) & 0xff);
+  t->stack[10] = (char)(((uint64)newsp>>16) & 0xff);
+  t->stack[11] = (char)(((uint64)newsp>>24) & 0xff);
+  t->stack[12] = (char)(((uint64)newsp>>32) & 0xff);
+  t->stack[13] = (char)(((uint64)newsp>>40) & 0xff);
+  t->stack[14] = (char)(((uint64)newsp>>48) & 0xff);
+  t->stack[15] = (char)(((uint64)newsp>>56) & 0xff);
+  current_thread->state = RUNNABLE;
+  thread_schedule();
 }
 
 void 
