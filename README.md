@@ -9,7 +9,7 @@
 - [x] [Lab lazy: Lazy allocation](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/lazy)
 - [x] [Lab cow: Copy-on-write fork](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/cow)
 - [x] [Lab thread: Multithreading](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/thread)
-- [ ] [Lab lock: Parallelism/locking]
+- [x] [Lab lock: Parallelism/locking](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/lock)
 - [ ] [Lab fs: File system]
 - [ ] [Lab mmap: Mmap]
 - [ ] [Lab net: Network stack]
