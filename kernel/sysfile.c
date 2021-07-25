@@ -16,6 +16,9 @@
 #include "file.h"
 #include "fcntl.h"
 
+
+
+
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
 static int
@@ -51,6 +54,8 @@ fdalloc(struct file *f)
   }
   return -1;
 }
+
+
 
 uint64
 sys_dup(void)
@@ -283,6 +288,64 @@ create(char *path, short type, short major, short minor)
   return ip;
 }
 
+uint64 sys_symlink(void) {
+  char target[MAXPATH], path[MAXPATH];
+  struct inode *ip;
+  
+  if (argstr(0, target, MAXPATH) < 0 || argstr(1, path, MAXPATH) < 0) {
+    return -1;
+  }
+
+  begin_op();
+  //已有则不覆写
+  if ((ip = namei(path)) != 0) {
+    end_op();
+    return -1;
+  } else {
+    //创建新inode存放
+    ip = create(path, T_SYMLINK, 0, 0);
+    if (ip == 0) {
+      end_op();
+      return -1;
+    }
+  }
+
+  if (writei(ip, 0, (uint64)target, 0, MAXPATH) == MAXPATH) {
+    iunlockput(ip);
+    end_op();
+    return 0;
+  } else {
+    panic("sysmlink: writei");
+  }
+
+  return -1;
+}
+
+//递归查找，深度超过十则停止
+static struct inode *
+symlink2inode(char *path, int threshold)
+{
+  struct inode *ip;
+  if (threshold == 10)
+    return 0;
+  
+  ip = namei(path);
+  if (ip == 0)
+    return 0;
+
+  //查找到的inode类型为T_SYMLINK则递归查找
+  if (ip->type == T_SYMLINK) {
+    ilock(ip);
+    if (readi(ip, 0, (uint64)path, 0, MAXPATH) < 0)
+      panic("symlink2inode: readi");
+    iunlockput(ip);
+    return symlink2inode(path, threshold + 1);
+  }
+
+  return ip;
+}
+
+
 uint64
 sys_open(void)
 {
@@ -303,8 +366,14 @@ sys_open(void)
       end_op();
       return -1;
     }
-  } else {
+  } else if (omode & O_NOFOLLOW) {
     if((ip = namei(path)) == 0){
+      end_op();
+      return -1;
+    }
+    ilock(ip);
+  } else {
+    if((ip = symlink2inode(path,0)) == 0){
       end_op();
       return -1;
     }
@@ -344,7 +413,8 @@ sys_open(void)
   if((omode & O_TRUNC) && ip->type == T_FILE){
     itrunc(ip);
   }
-
+  
+  
   iunlock(ip);
   end_op();
 
