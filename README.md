@@ -10,6 +10,6 @@
 - [x] [Lab cow: Copy-on-write fork](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/cow)
 - [x] [Lab thread: Multithreading](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/thread)
 - [x] [Lab lock: Parallelism/locking](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/lock)
-- [ ] [Lab fs: File system]
+- [x] [Lab fs: File system](https://github.com/HersonaREAL/xv6-riscv-fall20/tree/fs)
 - [ ] [Lab mmap: Mmap]
 - [ ] [Lab net: Network stack]
