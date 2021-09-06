@@ -5,6 +5,10 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "fcntl.h"
+#include "sleeplock.h"
+#include "fs.h"
+#include "file.h"
 
 struct spinlock tickslock;
 uint ticks;
@@ -65,6 +69,63 @@ usertrap(void)
     intr_on();
 
     syscall();
+  } else if (r_scause() == 15 || r_scause() == 13) {
+    uint64 badPage = r_stval();
+    //large than p->sz
+    if (badPage > p->sz || badPage < PGROUNDUP(p->trapframe->sp)) {
+      printf("usertrap: badPage invaild!\n");
+      p->killed = 1;
+    }
+
+    //vma judge
+    if (!p->proc_vma) {
+      printf("usertrap: proc_vma invaild\n");
+      p->killed = 1;
+    }
+    if (badPage > p->proc_vma->end_addr) {
+      printf("usertrap: badPage out of end_addr\n");
+      p->killed = 1;
+    }
+
+    if (!p->killed) {
+      //page fault and alloc page for prog
+      badPage = PGROUNDDOWN(badPage);
+      char *pa = kalloc();
+
+      if (pa != 0) {
+        //zeroing page
+        memset(pa, 0, PGSIZE);
+
+        //get prot
+        int prot = 0;
+        if (p->proc_vma->permissions & PROT_READ) {
+          prot |= PTE_R;
+        }
+        if (p->proc_vma->permissions & PROT_WRITE) {
+          prot |= PTE_W;
+        }
+
+        // map it
+        //printf("badPage: %p\n",badPage);
+        //vmprint(p->pagetable);
+        if (mappages(p->pagetable, badPage, PGSIZE, (uint64)pa, prot | PTE_U) != 0){
+          kfree(pa);
+          p->killed = 1;
+        } else {
+          // copy file content to mem
+          struct inode *ip = p->proc_vma->f->ip;
+          int offset = badPage - p->proc_vma->start_addr;
+          ilock(ip);
+          if (readi(ip, 1, (uint64)badPage, offset, 4096) == -1) {
+            panic("read file fail!\n");
+          }
+          iunlock(ip); 
+        }
+      } else {
+        printf("usertrap(): There is not enough mem to alloc page\n");
+        p->killed = 1;
+      }
+    }
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {

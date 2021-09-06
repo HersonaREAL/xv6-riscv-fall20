@@ -16,6 +16,8 @@
 #include "file.h"
 #include "fcntl.h"
 
+struct VMA vma[16];
+
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
 static int
@@ -51,6 +53,50 @@ fdalloc(struct file *f)
   }
   return -1;
 }
+
+uint64 sys_mmap(void) {
+  int length, offset, prot, flags;
+  struct file *f;
+  struct proc *p = myproc();
+  if (argint(1, &length) < 0 ||
+      argint(2, &prot) < 0 || argint(3, &flags) < 0 || argfd(4,0,&f) < 0 ||
+      argint(5, &offset) < 0) {
+    return -1;
+  }
+
+  // find vma
+  for (int i = 0; i < 16; ++i) {
+    if (vma[i].usesd == 0) {
+      memset(&vma[i],0,sizeof(struct VMA));
+      p->proc_vma = &vma[i];
+      vma[i].usesd = 1;
+      break;
+    }
+  }
+
+  //lazy alloc
+  p->proc_vma->start_addr = p->sz;
+  p->sz += length;
+  p->proc_vma->end_addr = p->sz;
+
+  p->proc_vma->length = length;
+  p->proc_vma->offset = 0;
+  p->proc_vma->f = f;
+
+  //file refrence plus
+  filedup(f);
+  
+  p->proc_vma->permissions = prot;
+  p->proc_vma->flags = flags;
+
+  //vmprint(p->pagetable);
+  return p->proc_vma->start_addr;
+}
+
+uint64 sys_munmap(void) {
+  return -1;
+}
+
 
 uint64
 sys_dup(void)
