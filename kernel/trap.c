@@ -77,12 +77,13 @@ usertrap(void)
       p->killed = 1;
     }
 
-    //vma judge
-    if (!p->proc_vma) {
+    // vma judge
+    struct VMA *proc_vma = getVMA(p,badPage);
+    if (!proc_vma) {
       printf("usertrap: proc_vma invaild\n");
       p->killed = 1;
     }
-    if (badPage > p->proc_vma->end_addr) {
+    if (badPage > proc_vma->end_addr) {
       printf("usertrap: badPage out of end_addr\n");
       p->killed = 1;
     }
@@ -96,12 +97,12 @@ usertrap(void)
         //zeroing page
         memset(pa, 0, PGSIZE);
 
-        //get prot
+        // get prot
         int prot = 0;
-        if (p->proc_vma->permissions & PROT_READ) {
+        if (proc_vma->permissions & PROT_READ) {
           prot |= PTE_R;
         }
-        if (p->proc_vma->permissions & PROT_WRITE) {
+        if (proc_vma->permissions & PROT_WRITE) {
           prot |= PTE_W;
         }
 
@@ -113,8 +114,8 @@ usertrap(void)
           p->killed = 1;
         } else {
           // copy file content to mem
-          struct inode *ip = p->proc_vma->f->ip;
-          int offset = badPage - p->proc_vma->start_addr;
+          struct inode *ip = proc_vma->f->ip;
+          int offset = badPage - proc_vma->start_addr;
           ilock(ip);
           if (readi(ip, 1, (uint64)badPage, offset, 4096) == -1) {
             panic("read file fail!\n");

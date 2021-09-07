@@ -16,7 +16,7 @@
 #include "file.h"
 #include "fcntl.h"
 
-struct VMA vma[16];
+struct VMA vma[MAXVMAS];
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
@@ -64,37 +64,88 @@ uint64 sys_mmap(void) {
     return -1;
   }
 
+  // check file read and write
+  if (!f->writable && (prot & PROT_WRITE) && !(flags & MAP_PRIVATE))
+    return -1;
+
   // find vma
+  struct VMA *proc_vma = 0;
   for (int i = 0; i < 16; ++i) {
     if (vma[i].usesd == 0) {
       memset(&vma[i],0,sizeof(struct VMA));
-      p->proc_vma = &vma[i];
       vma[i].usesd = 1;
+      vma[i].p = p;
+      proc_vma = &vma[i];
       break;
     }
   }
 
-  //lazy alloc
-  p->proc_vma->start_addr = p->sz;
-  p->sz += length;
-  p->proc_vma->end_addr = p->sz;
+  if (!proc_vma) {
+    printf("can not find empty vma!\n");
+    return -1;
+  }
 
-  p->proc_vma->length = length;
-  p->proc_vma->offset = 0;
-  p->proc_vma->f = f;
+  //lazy alloc
+  proc_vma->start_addr = p->sz;
+  p->sz += length;
+  proc_vma->end_addr = p->sz;
+
+  proc_vma->length = length;
+  proc_vma->offset = 0;
+  proc_vma->f = f;
 
   //file refrence plus
   filedup(f);
   
-  p->proc_vma->permissions = prot;
-  p->proc_vma->flags = flags;
+  proc_vma->permissions = prot;
+  proc_vma->flags = flags;
 
   //vmprint(p->pagetable);
-  return p->proc_vma->start_addr;
+  return proc_vma->start_addr;
 }
 
 uint64 sys_munmap(void) {
-  return -1;
+  uint64 addr;
+  int length;
+  struct proc *p = myproc();
+  if (argaddr(0, &addr) < 0 || argint(1, &length) < 0) {
+    return -1;
+  }
+
+  struct VMA *proc_vma = getVMA(p,addr);
+  if (!proc_vma) {
+    vmprint(p->pagetable);
+    printf("sys_munmap: addr error, addr: %p\n",addr);
+    return -1;
+  }
+  
+  if (length > proc_vma->length)
+    length = proc_vma->length;
+
+  if (addr + length > proc_vma->end_addr)
+    length = proc_vma->end_addr - addr;
+
+  proc_vma->start_addr += length;
+  proc_vma->length -= length;
+
+  // should write back
+  if (proc_vma->flags & MAP_SHARED && walkaddr(p->pagetable,PGROUNDDOWN(addr)) != 0) {
+    if (filewrite(proc_vma->f, addr, length) == -1) {
+      panic("can not write back \n");
+    }
+  }
+
+  uvmunmap(p->pagetable, PGROUNDDOWN(addr), PGROUNDUP(length) / PGSIZE, 1);
+
+  if (proc_vma->length == 0) {
+    // decrese file ref
+    proc_vma->f->ref--;
+
+    // free vma
+    memset(proc_vma, 0, sizeof(struct VMA));
+  }
+
+  return 0;
 }
 
 

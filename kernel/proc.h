@@ -103,7 +103,6 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-  struct VMA *proc_vma;
 };
 
 struct VMA {
@@ -114,6 +113,6 @@ struct VMA {
   int permissions;
   int flags;
   struct file *f;
-
+  struct proc *p;
   int usesd;
 };

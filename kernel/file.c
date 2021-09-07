@@ -13,11 +13,24 @@
 #include "stat.h"
 #include "proc.h"
 
+extern struct VMA vma[MAXVMAS];
+
 struct devsw devsw[NDEV];
 struct {
   struct spinlock lock;
   struct file file[NFILE];
 } ftable;
+
+struct VMA *getVMA(struct proc *p, uint64 addr) {
+  for (int i = 0; i < MAXVMAS; ++i) {
+    if (vma[i].usesd && vma[i].p && vma[i].p->pid == p->pid &&
+        (addr >= vma[i].start_addr && addr < vma[i].end_addr)) {
+      return &vma[i];
+    }
+  }
+
+  return 0;
+}
 
 void
 fileinit(void)
