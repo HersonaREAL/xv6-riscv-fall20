@@ -54,7 +54,7 @@ int munmap(uint64 addr, int length) {
   proc_vma->length -= length;
 
   // should write back
-  if (proc_vma->flags & MAP_SHARED && walkaddr(p->pagetable,PGROUNDDOWN(addr)) != 0) {
+  if (proc_vma->f->writable && proc_vma->flags & MAP_SHARED && walkaddr(p->pagetable,PGROUNDDOWN(addr)) != 0) {
     if (filewrite(proc_vma->f, addr, length) == -1) {
       panic("can not write back \n");
     }

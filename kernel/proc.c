@@ -3,6 +3,9 @@
 #include "memlayout.h"
 #include "riscv.h"
 #include "spinlock.h"
+#include "sleeplock.h"
+#include "fs.h"
+#include "file.h"
 #include "proc.h"
 #include "defs.h"
 
@@ -301,6 +304,22 @@ fork(void)
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   pid = np->pid;
+
+  // copy mmap
+  for (int i = 0; i < MAXVMAS; ++i) {
+    if (vma[i].usesd && vma[i].p->pid == p->pid) {
+      for (int j = MAXVMAS - 1; j >= 0; --j) {
+        if (!vma[j].usesd) {
+          memset(&vma[j], 0, sizeof(struct VMA));
+          memmove(&vma[j], &vma[i], sizeof(struct VMA));
+          vma[j].usesd = 1;
+          vma[j].p = np;
+          filedup(vma[j].f);
+          break;
+        }
+      }
+    }
+  }
 
   np->state = RUNNABLE;
 

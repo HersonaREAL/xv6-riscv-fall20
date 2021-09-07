@@ -83,7 +83,7 @@ usertrap(void)
       printf("usertrap: proc_vma invaild\n");
       p->killed = 1;
     }
-    if (badPage > proc_vma->end_addr) {
+    else if (badPage > proc_vma->end_addr) {
       printf("usertrap: badPage out of end_addr\n");
       p->killed = 1;
     }
@@ -107,7 +107,6 @@ usertrap(void)
         }
 
         // map it
-        //printf("badPage: %p\n",badPage);
         //vmprint(p->pagetable);
         if (mappages(p->pagetable, badPage, PGSIZE, (uint64)pa, prot | PTE_U) != 0){
           kfree(pa);
