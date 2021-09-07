@@ -27,6 +27,7 @@ int             exec(char*, char**);
 
 // file.c
 struct VMA *    getVMA(struct proc *p, uint64 addr);
+int             munmap(uint64 addr, int length);
 struct file*    filealloc(void);
 void            fileclose(struct file*);
 struct file*    filedup(struct file*);

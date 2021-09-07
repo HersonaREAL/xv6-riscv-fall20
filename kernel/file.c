@@ -12,6 +12,7 @@
 #include "file.h"
 #include "stat.h"
 #include "proc.h"
+#include "fcntl.h"
 
 extern struct VMA vma[MAXVMAS];
 
@@ -27,6 +28,46 @@ struct VMA *getVMA(struct proc *p, uint64 addr) {
         (addr >= vma[i].start_addr && addr < vma[i].end_addr)) {
       return &vma[i];
     }
+  }
+
+  return 0;
+}
+
+int munmap(uint64 addr, int length) {
+  struct proc *p = myproc();
+  struct VMA *proc_vma = getVMA(p, addr);
+
+  if (!proc_vma) {
+    vmprint(p->pagetable);
+    printf("sys_munmap: addr error, addr: %p\n",addr);
+    return -1;
+  }
+
+  // correct len
+  if (length > proc_vma->length)
+    length = proc_vma->length;
+
+  if (addr + length > proc_vma->end_addr)
+    length = proc_vma->end_addr - addr;
+
+  proc_vma->start_addr += length;
+  proc_vma->length -= length;
+
+  // should write back
+  if (proc_vma->flags & MAP_SHARED && walkaddr(p->pagetable,PGROUNDDOWN(addr)) != 0) {
+    if (filewrite(proc_vma->f, addr, length) == -1) {
+      panic("can not write back \n");
+    }
+  }
+
+  uvmunmap(p->pagetable, PGROUNDDOWN(addr), PGROUNDUP(length) / PGSIZE, 1);
+
+  if (proc_vma->length == 0) {
+    // decrese file ref
+    proc_vma->f->ref--;
+
+    // free vma
+    memset(proc_vma, 0, sizeof(struct VMA));
   }
 
   return 0;

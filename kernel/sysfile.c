@@ -16,7 +16,7 @@
 #include "file.h"
 #include "fcntl.h"
 
-struct VMA vma[MAXVMAS];
+extern struct VMA vma[MAXVMAS];
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
@@ -107,45 +107,11 @@ uint64 sys_mmap(void) {
 uint64 sys_munmap(void) {
   uint64 addr;
   int length;
-  struct proc *p = myproc();
   if (argaddr(0, &addr) < 0 || argint(1, &length) < 0) {
     return -1;
   }
 
-  struct VMA *proc_vma = getVMA(p,addr);
-  if (!proc_vma) {
-    vmprint(p->pagetable);
-    printf("sys_munmap: addr error, addr: %p\n",addr);
-    return -1;
-  }
-  
-  if (length > proc_vma->length)
-    length = proc_vma->length;
-
-  if (addr + length > proc_vma->end_addr)
-    length = proc_vma->end_addr - addr;
-
-  proc_vma->start_addr += length;
-  proc_vma->length -= length;
-
-  // should write back
-  if (proc_vma->flags & MAP_SHARED && walkaddr(p->pagetable,PGROUNDDOWN(addr)) != 0) {
-    if (filewrite(proc_vma->f, addr, length) == -1) {
-      panic("can not write back \n");
-    }
-  }
-
-  uvmunmap(p->pagetable, PGROUNDDOWN(addr), PGROUNDUP(length) / PGSIZE, 1);
-
-  if (proc_vma->length == 0) {
-    // decrese file ref
-    proc_vma->f->ref--;
-
-    // free vma
-    memset(proc_vma, 0, sizeof(struct VMA));
-  }
-
-  return 0;
+  return munmap(addr,length);
 }
 
 

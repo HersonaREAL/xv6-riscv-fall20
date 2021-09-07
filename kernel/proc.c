@@ -10,6 +10,8 @@ struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
 
+struct VMA vma[MAXVMAS];
+
 struct proc *initproc;
 
 int nextpid = 1;
@@ -343,6 +345,13 @@ exit(int status)
 
   if(p == initproc)
     panic("init exiting");
+
+  // remove mmap
+  for (int i = 0; i < MAXVMAS; ++i) {
+    if (vma[i].usesd && vma[i].p->pid == p->pid) {
+      munmap(vma[i].start_addr, vma[i].length);
+    }
+  }
 
   // Close all open files.
   for(int fd = 0; fd < NOFILE; fd++){
