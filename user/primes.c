@@ -31,7 +31,7 @@ void primerProcess(int fd[]){
 
 int
 main(int argc,char *argv[]){
-	int fd[0];
+	int fd[2];
 	pipe(fd);
 	primerProcess(fd);
 	close(fd[0]);
